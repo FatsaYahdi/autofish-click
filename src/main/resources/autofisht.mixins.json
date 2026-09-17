@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "saki.autofisht.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"TitleLoggerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
