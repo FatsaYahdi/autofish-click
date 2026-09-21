@@ -48,6 +48,24 @@ src/
 
 Output `.jar` will be in `build/libs/`.
 
+## Usage
+
+AutoFishT only clicks the skill-check bar. It does not cast, reel in, or recast the rod. Pair it with [XPlus Autofish](https://www.curseforge.com/minecraft/mc-mods/x-autofish), which handles that loop.
+
+1. Install AutoFishT and XPlus Autofish in your `mods` folder. The Fabric build of XPlus Autofish needs [Fabric API](https://www.curseforge.com/minecraft/mc-mods/fabric-api) and [Cloth Config API](https://www.curseforge.com/minecraft/mc-mods/cloth-config).
+2. Join the server, hold a fishing rod, and cast once.
+3. XPlus Autofish reels in when a fish bites and recasts after a short delay.
+4. When the server shows the skill-check bar, AutoFishT clicks the moment `▲` enters the `■` zone.
+
+Press `V` (default) to open the XPlus Autofish config screen. These options help on servers:
+
+- **Sound-Based Detection**: detects bites by sound instead of hook motion. Try it if bites go unnoticed in multiplayer.
+- **Persistent Mode**: recasts every 10 seconds if needed, which covers server lag and plugins that clear hooks.
+- **Clearlag Chat Pattern**: recasts when the server announces an entity clear.
+- **Recast Delay** and **Random Delay**: set the wait between reel-in and recast.
+
+AutoFishT has no toggle. It stays active while loaded. Remove the jar to turn it off.
+
 ## Configuration / tuning
 
 Detection logic lives in `AutoFishTClient.onTitleUpdate(String title)`:
