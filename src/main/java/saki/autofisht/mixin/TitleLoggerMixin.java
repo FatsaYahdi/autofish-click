@@ -13,6 +13,6 @@ public class TitleLoggerMixin {
 
     @Inject(method = "setTitle", at = @At("HEAD"))
     private void onSetTitle(Text title, CallbackInfo ci) {
-        AutoFishTClient.onTitleUpdate(title.getString());
+        AutoFishTClient.onTitleUpdate(title);
     }
 }

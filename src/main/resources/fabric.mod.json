@@ -17,6 +17,9 @@
 	"entrypoints": {
 		"client": [
 			"saki.autofisht.AutoFishTClient"
+		],
+		"modmenu": [
+			"saki.autofisht.AutoFishTModMenu"
 		]
 	},
 	"mixins": [
@@ -26,6 +29,7 @@
     "fabricloader": ">=0.15.0",
     "minecraft": ">=1.21 <=1.21.11",
     "java": ">=21",
-    "fabric-api": "*"
+    "fabric-api": "*",
+    "modmenu": "*"
 	}
 }

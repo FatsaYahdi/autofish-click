@@ -5,11 +5,14 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.text.Text;
+import net.minecraft.text.Style;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class AutoFishTClient implements ClientModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger("autofisht");
@@ -20,17 +23,18 @@ public class AutoFishTClient implements ClientModInitializer {
     private static boolean wasOverlapping = false;
     private static volatile boolean combosEnabled = true;
 
-    // universal delay before click fires, after any combo action starts
-    private static final int CLICK_DELAY_TICKS = 2; // ~100ms at 20 TPS
+    private static final int CLICK_DELAY_TICKS = 2;
     private static int clickDelayTicksRemaining = 0;
 
-    // yaw motion still steps over time, independent of when click fires
     private static int yawStepsRemaining = 0;
     private static final float YAW_STEP_DEGREES = 90f;
     private static final int YAW_STEP_COUNT = 4;
 
     private static Float originalYaw = null;
     private static boolean barActiveLastUpdate = false;
+
+    // target hex color confirmed from your logs - triangle turns this when in the click-ready zone
+    private static final int TARGET_RGB = 0xFACC15;
 
     @Override
     public void onInitializeClient() {
@@ -55,21 +59,22 @@ public class AutoFishTClient implements ClientModInitializer {
         return phases;
     }
 
-    public static void onTitleUpdate(String title) {
+    public static void onTitleUpdate(Text titleText) {
         MinecraftClient client = MinecraftClient.getInstance();
+        String title = titleText.getString();
         boolean hasBar = title.indexOf('▲') >= 0 && title.indexOf('■') >= 0;
 
         if (hasBar) {
             barActiveLastUpdate = true;
 
             int triangleIdx = title.indexOf('▲');
-            int zoneStart = title.indexOf('■');
-            int zoneEnd = title.lastIndexOf('■');
-            boolean overlapping = triangleIdx >= zoneStart && triangleIdx <= zoneEnd;
+            Integer triangleRgb = getRgbAtIndex(titleText, triangleIdx);
+
+            boolean overlapping = triangleRgb != null && triangleRgb == TARGET_RGB;
 
             if (overlapping && !wasOverlapping) {
                 if (combosEnabled) {
-                    performComboHit();
+                    performComboHit(client);
                 } else {
                     click();
                 }
@@ -77,7 +82,6 @@ public class AutoFishTClient implements ClientModInitializer {
             wasOverlapping = overlapping;
         } else {
             if (barActiveLastUpdate && originalYaw != null && client.player != null) {
-                LOGGER.info("[AutoFishT] Fishing finished, restoring yaw={}", originalYaw);
                 client.player.setYaw(originalYaw);
                 originalYaw = null;
             }
@@ -86,8 +90,27 @@ public class AutoFishTClient implements ClientModInitializer {
         }
     }
 
-    private static void performComboHit() {
-        MinecraftClient client = MinecraftClient.getInstance();
+    /** Walks the Text component tree, returns the raw RGB int of the color at the given plain-text character index. */
+    private static Integer getRgbAtIndex(Text root, int targetIndex) {
+        int[] counted = {0};
+        Integer[] result = {null};
+
+        root.visit((style, asString) -> {
+            int len = asString.length();
+            if (counted[0] <= targetIndex && targetIndex < counted[0] + len) {
+                if (style.getColor() != null) {
+                    result[0] = style.getColor().getRgb();
+                }
+                return Optional.of(Boolean.TRUE);
+            }
+            counted[0] += len;
+            return Optional.empty();
+        }, Style.EMPTY);
+
+        return result[0];
+    }
+
+    private static void performComboHit(MinecraftClient client) {
         if (client.player == null) return;
 
         List<ComboPhase> phases = activePhases();
@@ -98,19 +121,17 @@ public class AutoFishTClient implements ClientModInitializer {
 
         if (originalYaw == null) {
             originalYaw = client.player.getYaw();
-            LOGGER.info("[AutoFishT] Saved original yaw={}", originalYaw);
         }
 
         ComboPhase phase = phases.get(hitIndex % phases.size());
-        LOGGER.info("[AutoFishT] Hit #{} phase={}", hitIndex, phase);
 
         switch (phase) {
             case JUMP -> client.player.jump();
-            case SPIN360 -> yawStepsRemaining = YAW_STEP_COUNT; // keeps stepping in background
+            case SPIN360 -> yawStepsRemaining = YAW_STEP_COUNT;
             case NOLOOK -> client.player.setYaw(client.player.getYaw() + 180f);
         }
 
-        clickDelayTicksRemaining = CLICK_DELAY_TICKS; // click fires 100ms after any of the above
+        clickDelayTicksRemaining = CLICK_DELAY_TICKS;
         hitIndex++;
     }
 
@@ -125,7 +146,6 @@ public class AutoFishTClient implements ClientModInitializer {
             float newYaw = client.player.getYaw() + YAW_STEP_DEGREES;
             client.player.setYaw(newYaw);
             yawStepsRemaining--;
-            LOGGER.info("[AutoFishT] Yaw step, remaining={}, yaw={}", yawStepsRemaining, newYaw);
         }
 
         if (clickDelayTicksRemaining > 0) {
